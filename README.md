@@ -72,7 +72,5 @@ Real failures I caused or met, how I diagnosed them and what fixed them: [docs/t
 
 ## Certifications
 
-<!-- PL: Link do odznaki z profilu Microsoft Learn (Credentials → Share). -->
-
-- Microsoft Certified: Azure Fundamentals (AZ-900)
+- [Microsoft Certified: Azure Fundamentals (AZ-900)](https://learn.microsoft.com/api/credentials/share/en-us/KrzysztofWaka-3059/438B8E4171C35F34?sharingId=203E19A9C23B6006)
 - Microsoft Certified: Azure Administrator Associate (AZ-104) — in progress

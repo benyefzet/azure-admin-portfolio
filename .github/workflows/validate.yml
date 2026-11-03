@@ -1,0 +1,60 @@
+name: validate
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'governance/**'
+      - 'bicepconfig.json'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - 'governance/**'
+      - 'bicepconfig.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Bicep build and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build and lint every Bicep file
+        run: |
+          az bicep install
+          for file in $(git ls-files '*.bicep'); do
+            echo "::group::$file"
+            az bicep build --file "$file" --stdout > /dev/null
+            az bicep lint --file "$file"
+            echo "::endgroup::"
+          done
+
+  what-if:
+    name: What-if against the dev subscription
+    needs: lint
+    runs-on: ubuntu-latest
+    # Runs on pull requests once OIDC is configured (see infra/README.md); until then the job is skipped.
+    if: ${{ github.event_name == 'pull_request' && vars.AZURE_CLIENT_ID != '' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: What-if
+        run: |
+          az deployment sub what-if \
+            --name "whatif-${{ github.run_id }}" \
+            --location northeurope \
+            --parameters infra/main.dev.bicepparam

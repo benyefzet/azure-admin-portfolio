@@ -1,0 +1,15 @@
+# Secrets and local-only values
+.env
+*.local.bicepparam
+*.local.json
+identity/out/
+
+# ARM JSON compiled from Bicep (bicep build) - the .bicep files are the source of truth
+infra/**/*.json
+governance/main.json
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json

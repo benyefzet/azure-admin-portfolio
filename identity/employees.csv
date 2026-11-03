@@ -1,0 +1,13 @@
+GivenName,Surname,JobTitle,Department,Office
+Anna,Kowalska,Kierowniczka sieci,Zarząd,Centrala
+Joanna,Woźniak,Księgowa,Administracja,Centrala
+Paweł,Dąbrowski,Specjalista IT,IT,Centrala
+Marcin,Jankowski,Administrator Azure,IT,Centrala
+Ewa,Kozłowska,Specjalistka e-commerce,Sprzedaż,Centrala
+Piotr,Nowak,Piekarz,Produkcja,Piekarnia Centralna
+Katarzyna,Wiśniewska,Cukierniczka,Produkcja,Piekarnia Centralna
+Michał,Wójcik,Kierownik zmiany,Produkcja,Piekarnia Centralna
+Łukasz,Szymański,Kierowca,Logistyka,Piekarnia Centralna
+Magdalena,Zielińska,Kierowniczka sklepu,Sprzedaż,Sklep Rynek
+Agnieszka,Kamińska,Sprzedawczyni,Sprzedaż,Sklep Rynek
+Tomasz,Lewandowski,Sprzedawca,Sprzedaż,Sklep Dworzec

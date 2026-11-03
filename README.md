@@ -4,7 +4,7 @@
 
 Infrastructure for a fictional bakery chain (3 shops, an online store, 25 employees), built with Bicep, Azure CLI and PowerShell while preparing for the Microsoft AZ-104 exam.
 
-[![validate](https://github.com/<github-user>/azure-admin-portfolio/actions/workflows/validate.yml/badge.svg)](https://github.com/<github-user>/azure-admin-portfolio/actions/workflows/validate.yml)
+[![validate](https://github.com/benyefzet/azure-admin-portfolio/actions/workflows/validate.yml/badge.svg)](https://github.com/benyefzet/azure-admin-portfolio/actions/workflows/validate.yml)
 
 ## Architecture
 

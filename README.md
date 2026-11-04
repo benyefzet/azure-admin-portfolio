@@ -20,7 +20,7 @@ Hub-and-spoke network in North Europe: shared services in the hub, web tier in t
 
 | Module | Azure services | AZ-104 skills | Status |
 | --- | --- | --- | --- |
-| [identity](identity/) | Microsoft Entra ID, Microsoft Graph PowerShell | users, groups, licenses, external users, SSPR | planned |
+| [identity](identity/) | Microsoft Entra ID, Microsoft Graph PowerShell | users, groups, licenses, external users, SSPR | in progress|
 | [governance](governance/) | Azure Policy, RBAC, management groups, Cost Management | policy, custom roles, scopes, budgets, tags | planned |
 | [network](infra/modules/network.bicep) | VNet, peering, NSG, ASG, UDR, Bastion, DNS, Load Balancer | networking (15–20 %) | in progress |
 | [storage](infra/modules/storage.bicep) | Storage account, Blob, Azure Files, private endpoint | storage (15–20 %) | planned |

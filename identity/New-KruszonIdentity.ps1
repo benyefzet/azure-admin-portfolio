@@ -8,6 +8,8 @@
     Idempotent: users and groups that already exist are skipped, so you can run it again after editing the CSV.
     Initial passwords go to identity/out/ (git-ignored) - never to the console or the repository - and every
     user must change the password at first sign-in.
+    The script signs in to the directory of -Domain, so it also works when a personal Microsoft account
+    (for example one created with a Gmail address) owns the subscription. Any failed Graph call stops it.
     -DynamicGroups creates groups whose membership follows the Department attribute. Dynamic membership
     requires Microsoft Entra ID P1 or P2 (the 30-day P2 trial is enough).
 
@@ -95,13 +97,20 @@ $people = foreach ($employee in $employees) {
     }
 }
 
-Connect-MgGraph -Scopes 'User.ReadWrite.All', 'Group.ReadWrite.All' -NoWelcome
+# -TenantId keeps the sign-in inside your directory. Without it, a personal Microsoft account signs in as a
+# consumer account, and Microsoft Graph rejects user management with 403 Forbidden or 405 MethodNotAllowed.
+Connect-MgGraph -TenantId $Domain -Scopes 'User.ReadWrite.All', 'Group.ReadWrite.All' -NoWelcome -ErrorAction Stop
 
-$newCredentials = [System.Collections.Generic.List[object]]::new()
+# Microsoft Graph cmdlets ignore $ErrorActionPreference, so every Graph call below passes -ErrorAction Stop:
+# a failed call must stop the script, not be reported as a success.
+
+$outDirectory = Join-Path $PSScriptRoot 'out'
+$outFile = Join-Path $outDirectory ('initial-passwords-{0:yyyyMMdd-HHmmss}.csv' -f (Get-Date))
+$createdCount = 0
 
 foreach ($person in $people) {
     $upn = $person.UserPrincipalName
-    if (Get-MgUser -Filter "userPrincipalName eq '$upn'") {
+    if (Get-MgUser -Filter "userPrincipalName eq '$upn'" -ErrorAction Stop) {
         Write-Verbose "User $upn already exists - skipped."
         continue
     }
@@ -126,15 +135,19 @@ foreach ($person in $people) {
             ForceChangePasswordNextSignIn = $true
         }
     }
-    $null = New-MgUser @userParameters
-    $newCredentials.Add([pscustomobject]@{ UserPrincipalName = $upn; InitialPassword = $password })
+    $null = New-MgUser @userParameters -ErrorAction Stop
+    # Save each password as soon as its user exists, so a later failure cannot lose it.
+    $null = New-Item -ItemType Directory -Path $outDirectory -Force
+    [pscustomobject]@{ UserPrincipalName = $upn; InitialPassword = $password } |
+        Export-Csv -Path $outFile -NoTypeInformation -Encoding utf8 -Append
+    $createdCount++
     Write-Host "Created user $upn"
 }
 
 $departments = @($employees.Department | Sort-Object -Unique)
 foreach ($department in $departments) {
     $groupName = "GRP-Kruszon-$(ConvertTo-Ascii $department)" -replace '\s+', '-'
-    $group = Get-MgGroup -Filter "displayName eq '$groupName'" | Select-Object -First 1
+    $group = Get-MgGroup -Filter "displayName eq '$groupName'" -ErrorAction Stop | Select-Object -First 1
     if (-not $group) {
         if (-not $PSCmdlet.ShouldProcess($groupName, 'Create security group')) {
             continue
@@ -151,7 +164,7 @@ foreach ($department in $departments) {
             $groupParameters.MembershipRule = "(user.department -eq `"$department`")"
             $groupParameters.MembershipRuleProcessingState = 'On'
         }
-        $group = New-MgGroup @groupParameters
+        $group = New-MgGroup @groupParameters -ErrorAction Stop
         Write-Host "Created group $groupName"
     }
 
@@ -161,9 +174,9 @@ foreach ($department in $departments) {
     }
 
     # Assigned membership: add the department's employees who are not members yet (safe to run again).
-    $memberIds = @(Get-MgGroupMember -GroupId $group.Id -All | Select-Object -ExpandProperty Id)
+    $memberIds = @(Get-MgGroupMember -GroupId $group.Id -All -ErrorAction Stop | Select-Object -ExpandProperty Id)
     foreach ($person in @($people | Where-Object { $_.Employee.Department -eq $department })) {
-        $user = Get-MgUser -Filter "userPrincipalName eq '$($person.UserPrincipalName)'"
+        $user = Get-MgUser -Filter "userPrincipalName eq '$($person.UserPrincipalName)'" -ErrorAction Stop
         if (-not $user) {
             # A brand-new user can take a moment to appear in queries - run the script again to add them.
             Write-Warning "User $($person.UserPrincipalName) not found yet; not added to $groupName."
@@ -173,16 +186,12 @@ foreach ($department in $departments) {
             continue
         }
         if ($PSCmdlet.ShouldProcess($groupName, "Add member $($person.UserPrincipalName)")) {
-            New-MgGroupMember -GroupId $group.Id -DirectoryObjectId $user.Id
+            New-MgGroupMember -GroupId $group.Id -DirectoryObjectId $user.Id -ErrorAction Stop
             Write-Host "Added $($person.UserPrincipalName) to $groupName"
         }
     }
 }
 
-if ($newCredentials.Count -gt 0) {
-    $outDirectory = Join-Path $PSScriptRoot 'out'
-    $null = New-Item -ItemType Directory -Path $outDirectory -Force
-    $outFile = Join-Path $outDirectory ('initial-passwords-{0:yyyyMMdd-HHmmss}.csv' -f (Get-Date))
-    $newCredentials | Export-Csv -Path $outFile -NoTypeInformation -Encoding utf8
-    Write-Warning "Initial passwords saved to $outFile (git-ignored). Hand them over securely, then delete the file."
+if ($createdCount -gt 0) {
+    Write-Warning "Initial passwords of $createdCount new users saved to $outFile (git-ignored). Hand them over securely, then delete the file."
 }

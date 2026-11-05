@@ -2,7 +2,7 @@
 
 <!-- PL: Uzupełnij po tygodniu T1: zrzuty ekranu w docs/images/identity-*.png, wnioski, czas wykonania. -->
 
-**Business need:** Kruszon's 25 employees (12 in the sample CSV) work in six departments; they need accounts on day one, and access must follow their department automatically.
+**Business need:** Kruszon's 25 employees work in six departments; they need accounts on day one, and access must follow their department automatically.
 
 `-WhatIf` still signs in to Microsoft Graph, because the script checks which users and groups already exist.
 
@@ -20,7 +20,7 @@ Install-Module Microsoft.Graph -Scope CurrentUser
 
 | Exam skill | What I configured | Evidence |
 | --- | --- | --- |
-| Manage licenses | group-based licensing for GRP-Kruszon-IT | ![](../docs/images/identity-licensing.png) |
+| Manage licenses | group-based licensing for GRP-Kruszon-IT | screenshot after Lab 01 |
 | External users | B2B guest invited for the accounting firm | |
 | SSPR | self-service password reset for GRP-Kruszon-IT (pilot) | |
 | User and group properties | dynamic rule `user.department -eq "Sprzedaż"` | |

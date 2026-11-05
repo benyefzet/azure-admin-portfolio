@@ -1,6 +1,5 @@
 # Kruszon Bakery — Azure infrastructure (AZ-104 portfolio)
 
-<!-- PL: Pierwsze zdanie ma powiedzieć rekruterowi w 30 sekund, co zbudowałeś i czym. Każdy komentarz z dopiskiem PL usuń, gdy wypełnisz jego sekcję. -->
 
 Infrastructure for a fictional bakery chain (3 shops, an online store, 25 employees), built with Bicep, Azure CLI and PowerShell while preparing for the Microsoft AZ-104 exam.
 
@@ -8,15 +7,30 @@ Infrastructure for a fictional bakery chain (3 shops, an online store, 25 employ
 
 ## Architecture
 
-![Architecture](docs/images/architecture.png)
+```mermaid
+flowchart LR
+    subgraph hub["Hub · 10.0.0.0/16"]
+        shared["snet-shared<br/>shared services, NVA"]
+        bastion["AzureBastionSubnet"]
+    end
+    subgraph app["App spoke · 10.1.0.0/16"]
+        web["snet-web<br/>load balancer, VM scale set"]
+        appsvc["snet-appsvc<br/>App Service integration"]
+    end
+    subgraph data["Data spoke · 10.2.0.0/16"]
+        pe["snet-pe<br/>private endpoint"]
+    end
+    storage[("Storage account")]
+    hub <-->|peering| app
+    hub <-->|peering| data
+    pe --- storage
+```
 
-<!-- PL: Wklej diagram (draw.io lub Excalidraw z oficjalnymi ikonami Azure) jako docs/images/architecture.png. Pod nim 2–3 zdania: hub-spoke, co stoi w której sieci, jak płynie ruch. -->
 
 Hub-and-spoke network in North Europe: shared services in the hub, web tier in the app spoke, storage behind a private endpoint in the data spoke. West Europe is the disaster-recovery region.
 
 ## Modules
 
-<!-- PL: Status zmieniaj na bieżąco: planned → in progress → done. Link w kolumnie Module prowadzi do README modułu. -->
 
 | Module | Azure services | AZ-104 skills | Status |
 | --- | --- | --- | --- |
@@ -52,9 +66,8 @@ az deployment sub create --location northeurope --parameters governance/main.bic
 
 ## Cost
 
-<!-- PL: Wpisz realne liczby z Cost Management po każdym tygodniu (docs/cost.md). Rekruterzy cenią świadomość kosztów. -->
 
-Full environment: ~X USD per hour while running, ~Y USD per month for what stays deployed. Details: [docs/cost.md](docs/cost.md).
+Nothing runs yet; real numbers from Cost Management will be added after the first deployment. A 25 USD monthly budget alerts at 50 %, 80 % and 100 % of actual cost and at 100 % of forecast. Details: [docs/cost.md](docs/cost.md).
 
 ## Decisions
 
@@ -66,9 +79,10 @@ Real failures I caused or met, how I diagnosed them and what fixed them: [docs/t
 
 ## What I learned
 
-<!-- PL: 3–5 konkretnych punktów, np. "peering nie jest przechodni – ruch spoke↔spoke wymaga NVA lub bezpośredniego peeringu". Bez ogólników. -->
 
-- …
+- Deployments are incremental by default: resources missing from a template stay in the resource group, so I run `what-if` before every deployment.
+- A personal Microsoft account must connect to Microsoft Graph with `-TenantId`; otherwise it signs in as a consumer account and cannot manage users ([troubleshooting log](docs/troubleshooting.md)).
+- Microsoft Graph PowerShell cmdlets ignore `$ErrorActionPreference`, so my scripts pass `-ErrorAction Stop` to fail safely.
 
 ## Certifications
 

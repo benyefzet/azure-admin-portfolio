@@ -1,7 +1,9 @@
 using 'main.bicep'
 
+// The budget alert recipient is not stored in the repository.
+// Set it before deploying: $env:KRUSZON_BUDGET_EMAIL = "you@example.com"
 param budgetContactEmails = [
-  'twoj.email@example.com'
+  readEnvironmentVariable('KRUSZON_BUDGET_EMAIL', 'budget-alerts@example.invalid')
 ]
 param budgetAmount = 25
 param requiredTagEnforcement = 'DoNotEnforce'

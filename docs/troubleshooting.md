@@ -11,6 +11,37 @@ Problems I met, or caused on purpose, while building this environment. Every ent
 | 2026-11-22 | [A policy denial names the expression that failed](#a-policy-denial-names-the-expression-that-failed) | Governance |
 | 2026-11-22 | [az policy state fails with SubscriptionNotRegistered](#az-policy-state-fails-with-subscriptionnotregistered) | Governance |
 
+## Reading an Azure error
+
+Four error codes cover nearly everything that has blocked a deployment in this subscription. The code names the mechanism, so it says where to look before any guessing starts.
+
+| Error code | Mechanism | What fixes it |
+| --- | --- | --- |
+| `RequestDisallowedByPolicy` | Azure Policy, `Deny` effect | Read `evaluatedExpressions` in the error, then change the request or the policy |
+| `ScopeLocked` | A `CanNotDelete` or `ReadOnly` lock | Remove the lock: `az lock delete --name <name> --resource-group <group>` |
+| `AuthorizationFailed` | Azure RBAC, no permission at that scope | Check the role assignment and its scope; a management group is a different scope from the subscription |
+| `SubscriptionNotRegistered` | Resource provider not registered | `az provider register --namespace <provider>`, then wait for `Registered` |
+
+Two of them have their own entries below: [the policy denial](#a-policy-denial-names-the-expression-that-failed) and [the missing provider](#az-policy-state-fails-with-subscriptionnotregistered). `ScopeLocked` came from a deliberate delete lock on a throwaway resource group.
+
+## Azure Policy effects
+
+Only an effect that changes a resource needs a managed identity, and a role assignment to go with it.
+
+| Effect | What it does | Needs an identity? |
+| --- | --- | --- |
+| `Deny` | Rejects the request before the resource exists | No |
+| `Audit` | Lets the request through, marks the resource non-compliant | No |
+| `AuditIfNotExists` | Checks whether a related resource exists | No |
+| `Append` | Adds fields to the request | No |
+| `Modify` | Changes a resource's tags or properties | Yes |
+| `DeployIfNotExists` | Deploys the missing related resource | Yes |
+| `Disabled` | Not evaluated at all | No |
+
+Two settings are easy to confuse. `enforcementMode: DoNotEnforce` sits on the **assignment**: the effect is not enforced, but compliance is still evaluated and reported, which is how `kruszon-require-env-tag-on-rg` runs here. `effect: Disabled` sits in the **definition**: the policy is not evaluated, so there is no compliance data either.
+
+---
+
 ## Microsoft Graph returns 403/405 when creating users
 
 **Symptom:** `New-KruszonIdentity.ps1` printed `Created user ...`, but no user appeared in Microsoft Entra ID. Every `New-MgUser` call had failed with `405 (MethodNotAllowed)` and every `Get-MgUser` call with `403 (Forbidden)`, both with `ErrorCode: UnknownError`.

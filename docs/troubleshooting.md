@@ -8,6 +8,8 @@ Problems I met, or caused on purpose, while building this environment. Every ent
 | 2026-11-07 | [Microsoft 365 admin center rejects my personal account](#microsoft-365-admin-center-rejects-my-personal-account) | Identity |
 | 2026-11-09 | [B2B guest invited with a typo in the email](#b2b-guest-invited-with-a-typo-in-the-email) | Identity |
 | 2026-11-07 | [Entra ID P2 trial fails with error 43881](#entra-id-p2-trial-fails-with-error-43881) (open) | Identity |
+| 2026-11-22 | [A policy denial names the expression that failed](#a-policy-denial-names-the-expression-that-failed) | Governance |
+| 2026-11-22 | [az policy state fails with SubscriptionNotRegistered](#az-policy-state-fails-with-subscriptionnotregistered) | Governance |
 
 ## Microsoft Graph returns 403/405 when creating users
 
@@ -79,6 +81,56 @@ Problems I met, or caused on purpose, while building this environment. Every ent
 **Workaround:** I practise dynamic groups and self-service password reset in Microsoft Learn simulations, and the license evidence in [`identity/`](../identity/README.md) stays marked as planned until the trial works.
 
 **Lesson:** a trial of a paid Entra feature can stop at order verification whatever your admin roles are, so plan labs so that one missing license does not block the rest of the week.
+
+---
+
+## A policy denial names the expression that failed
+
+**Symptom:** `az group create --name rg-kruszon-policytest --location westus` failed with `RequestDisallowedByPolicy` and a wall of JSON. Nothing was created.
+
+**Diagnosis:**
+
+1. The first lines name the assignment and the definition behind it: `kruszon-allowed-rg-locations`, built from the built-in `Allowed locations for resource groups`.
+2. The part worth reading is `evaluationDetails.evaluatedExpressions`, which lists every condition of the rule with the value it saw and the verdict:
+
+```json
+{ "result": "True", "expression": "location", "expressionValue": "westus",
+  "targetValue": ["northeurope", "westeurope"], "operator": "NotIn" }
+```
+
+3. Both expressions returned `True`, so the rule matched and `policyDefinitionEffect` applied: `Deny`.
+
+**Root cause:** the request was correct; the guardrail did its job. This denial was deliberate, to prove the policy works.
+
+**Fix:** none needed. The same resource group was created in North Europe without complaint.
+
+**Lesson:** read a policy error from the bottom up. `evaluatedExpressions` tells you which field and which value triggered the rule, so you know whether to change the request or the policy. Guessing from the headline message wastes time when several assignments could be to blame.
+
+---
+
+## az policy state fails with SubscriptionNotRegistered
+
+**Symptom:** `az policy state trigger-scan` returned `(SubscriptionNotRegistered) The subscription ... is not registered to use namespace Microsoft.PolicyInsights`, while the policies themselves were clearly working — a `Deny` had just rejected a resource group.
+
+**Diagnosis:**
+
+1. Enforcement and reporting are different services. Enforcement happens in `Microsoft.Authorization`, which was registered; compliance data is served by `Microsoft.PolicyInsights`, which was not.
+2. A new subscription only has a default set of resource providers registered. The portal registers a missing one quietly the first time you open that service, so the gap shows up when a request comes from the CLI or a template instead.
+3. `az provider show --namespace Microsoft.PolicyInsights --query registrationState -o tsv` returned `NotRegistered`.
+
+**Root cause:** the resource provider for Azure Policy compliance data had never been registered on this subscription.
+
+**Fix:**
+
+```powershell
+az provider register --namespace Microsoft.PolicyInsights
+az provider show --namespace Microsoft.PolicyInsights --query registrationState -o tsv   # wait for Registered
+az policy state trigger-scan                                                             # omit --no-wait to block until done
+```
+
+Registration took about two minutes, the scan a few more. Only then did the compliance view show the two test resource groups.
+
+**Lesson:** an empty compliance report is not proof of compliance. Before trusting `100% (0 out of 0)`, check that the provider is registered and that a scan has actually run.
 
 ---
 

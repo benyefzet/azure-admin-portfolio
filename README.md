@@ -34,13 +34,13 @@ Hub-and-spoke network in North Europe: shared services in the hub, web tier in t
 
 | Module | Azure services | AZ-104 skills | Status |
 | --- | --- | --- | --- |
-| [identity](identity/) | Microsoft Entra ID, Microsoft Graph PowerShell | users, groups, licenses, external users, SSPR | in progress|
-| [governance](governance/) | Azure Policy, RBAC, management groups, Cost Management | policy, custom roles, scopes, budgets, tags | planned |
-| [network](infra/modules/network.bicep) | VNet, peering, NSG, ASG, UDR, Bastion, DNS, Load Balancer | networking (15–20 %) | in progress |
-| [storage](infra/modules/storage.bicep) | Storage account, Blob, Azure Files, private endpoint | storage (15–20 %) | planned |
-| [compute](infra/modules/compute.bicep) | VM Scale Sets, availability zones, autoscale | compute | planned |
-| [apps](infra/modules/apps.bicep) | App Service, deployment slots, ACR, Container Apps | compute | planned |
-| [operations](infra/modules/operations.bicep) | Azure Monitor, Log Analytics, Backup, Site Recovery | monitoring (10–15 %) | planned |
+| [identity](identity/) | Microsoft Entra ID, Microsoft Graph PowerShell | users, groups, licenses, external users, SSPR | in progress |
+| [governance](governance/) | Azure Policy, RBAC, management groups, Cost Management | policy, custom roles, scopes, budgets, tags | deployed and documented |
+| [network](infra/modules/network.bicep) | VNet, peering, NSG, ASG, UDR, Bastion, DNS, Load Balancer | networking (15–20 %) | template written, not deployed |
+| [storage](infra/modules/storage.bicep) | Storage account, Blob, Azure Files, private endpoint | storage (15–20 %) | template written, not deployed |
+| [compute](infra/modules/compute.bicep) | VM Scale Sets, availability zones, autoscale | compute | template written, not deployed |
+| [apps](infra/modules/apps.bicep) | App Service, deployment slots, ACR, Container Apps | compute | template written, not deployed |
+| [operations](infra/modules/operations.bicep) | Azure Monitor, Log Analytics, Backup, Site Recovery | monitoring (10–15 %) | template written, not deployed |
 
 ## Deploy
 
@@ -52,9 +52,10 @@ Connect-AzAccount
 ./scripts/deploy.ps1 -Environment dev               # what-if, confirm, deploy
 ```
 
-Governance (policies, custom role, budget) is a separate deployment:
+Governance (policies, custom role, budget) is a separate deployment. The budget alert recipient is not stored in the repository, so set it first:
 
-```bash
+```powershell
+$env:KRUSZON_BUDGET_EMAIL = "you@example.com"
 az deployment sub create --location northeurope --parameters governance/main.bicepparam
 ```
 
@@ -83,6 +84,8 @@ Real failures I caused or met, how I diagnosed them and what fixed them: [docs/t
 - Deployments are incremental by default: resources missing from a template stay in the resource group, so I run `what-if` before every deployment.
 - A personal Microsoft account must connect to Microsoft Graph with `-TenantId`; otherwise it signs in as a consumer account and cannot manage users ([troubleshooting log](docs/troubleshooting.md)).
 - Microsoft Graph PowerShell cmdlets ignore `$ErrorActionPreference`, so my scripts pass `-ErrorAction Stop` to fail safely.
+- A policy error names the rule that stopped the request. `evaluatedExpressions` shows which field and which value matched, so there is no guessing which of several assignments is to blame.
+- Enforcement and compliance reporting are different services. `Deny` works the moment an assignment exists, but the compliance view stays empty until `Microsoft.PolicyInsights` is registered and a scan has run.
 
 ## Certifications
 
